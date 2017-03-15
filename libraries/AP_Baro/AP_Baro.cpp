@@ -227,16 +227,31 @@ void AP_Baro::calibrate(bool save)
    update the barometer calibration
    this updates the baro ground calibration to the current values. It
    can be used before arming to keep the baro well calibrated
+
+   The altitude argument is an optional argument holding the current absolute
+   altitude of the vehicle. If it is set to 0, then we assume there is no
+   absolute reference source available, and will calculate our ground altitude
+   against an ISA atmosphere instead
 */
-void AP_Baro::update_calibration()
+void AP_Baro::update_calibration(const AP_GPS &gps)
 {
     for (uint8_t i=0; i<_num_sensors; i++) {
+        float last_temperature = sensors[i].ground_temperature;
+        sensors[i].ground_temperature.set(_get_external_temperature_C(i));
+
         if (healthy(i)) {
             sensors[i].ground_pressure.set(get_pressure(i));
-        }
-        float last_temperature = sensors[i].ground_temperature;
-        sensors[i].ground_temperature.set(get_calibration_temperature(i));
 
+            // update ground altitude estimate
+            if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) {
+                sensors[i].ground_altitude = gps.location().alt * 0.01f;
+                sensors[i].delta_ISA_C = sensors[i].ground_temperature - _get_ISA_temperature_C(sensors[i].ground_altitude);
+            } else {
+                // we don't have a valid external altitude reference, assume an ISA atmosphere
+                sensors[i].ground_altitude = (sensors[i].ground_temperature - ISA_TEMP_C) / ISA_LAPSE_RATE;
+                sensors[i].delta_ISA_C = 0.0f;
+            }
+        }
         // don't notify the GCS too rapidly or we flood the link
         uint32_t now = AP_HAL::millis();
         if (now - _last_notify_ms > 10000) {
@@ -257,7 +272,7 @@ void AP_Baro::update_calibration()
 float AP_Baro::get_altitude_difference(float base_pressure, float pressure) const
 {
     float ret;
-    float temp    = get_ground_temperature() + 273.15f;
+    float temp    = get_ground_temperature() + C_TO_KELVIN;
     float scaling = pressure / base_pressure;
 
     // This is an exact calculation that is within +-2.5m of the standard
@@ -279,8 +294,8 @@ float AP_Baro::get_EAS2TAS(void)
         return _EAS2TAS;
     }
 
-    float tempK = get_calibration_temperature() + 273.15f - 0.0065f * altitude;
-    _EAS2TAS = safe_sqrt(1.225f / ((float)get_pressure() / (287.26f * tempK)));
+    float tempK =  C_TO_KELVIN +  _get_ISA_temperature_C(altitude + _get_ground_altitude()) +  _get_delta_ISA_C();
+    _EAS2TAS = safe_sqrt(1.225f / ((float)get_pressure() / (ISA_GAS_CONSTANT * tempK)));
     _last_altitude_EAS2TAS = altitude;
     return _EAS2TAS;
 }
@@ -320,9 +335,10 @@ void AP_Baro::set_external_temperature(float temperature)
 }
 
 /*
-  get the temperature in degrees C to be used for calibration purposes
+  Get the current external temperature in degrees C.
+  If no external temperature is available, use the barometers temperature
  */
-float AP_Baro::get_calibration_temperature(uint8_t instance) const
+float AP_Baro::_get_external_temperature_C(uint8_t instance) const
 {
     // if we have a recent external temperature then use it
     if (_last_external_temperature_ms != 0 && AP_HAL::millis() - _last_external_temperature_ms < 10000) {
@@ -338,6 +354,12 @@ float AP_Baro::get_calibration_temperature(uint8_t instance) const
         ret = 25;
     }
     return ret;
+}
+
+// returns the predicted ISA tempertature in C for a given altitude in meters
+float AP_Baro::_get_ISA_temperature_C(const float altitude) const
+{
+    return ISA_TEMP_C - (ISA_LAPSE_RATE * altitude);
 }
 
 

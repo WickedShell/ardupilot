@@ -2,6 +2,7 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Param/AP_Param.h>
+#include <AP_GPS/AP_GPS.h>
 #include <Filter/Filter.h>
 #include <Filter/DerivativeFilter.h>
 
@@ -11,6 +12,12 @@
 // maximum number of drivers. Note that a single driver can provide
 // multiple sensor instances
 #define BARO_MAX_DRIVERS 3
+
+#define C_TO_KELVIN 273.15f
+// Gas Constant is from Aerodynamics for Engineering Students, Third Edition, E.L.Houghton and N.B.Carruthers
+#define ISA_GAS_CONSTANT 287.26f
+#define ISA_LAPSE_RATE 0.0065f
+#define ISA_TEMP_C 15.0f
 
 class AP_Baro_Backend;
 
@@ -60,7 +67,9 @@ public:
 
     // update the barometer calibration to the current pressure. Can
     // be used for incremental preflight update of baro
-    void update_calibration(void);
+    // altitude is the best external guess of the absolute altitude,
+    // if uknown provide altitude of 0
+    void update_calibration(const AP_GPS &gps);
 
     // get current altitude in meters relative to altitude at the time
     // of the last calibrate() call
@@ -102,9 +111,6 @@ public:
 
     // settable parameters
     static const struct AP_Param::GroupInfo var_info[];
-
-    float get_calibration_temperature(void) const { return get_calibration_temperature(_primary); }
-    float get_calibration_temperature(uint8_t instance) const;
 
     // HIL (and SITL) interface, setting altitude
     void setHIL(float altitude_msl);
@@ -172,6 +178,8 @@ private:
         float altitude;                 // calculated altitude
         AP_Float ground_temperature;
         AP_Float ground_pressure;
+        float ground_altitude;          // best guess of ground altitude
+        float delta_ISA_C;              // best guess of delta ISA temperature in C
     } sensors[BARO_MAX_INSTANCES];
 
     AP_Float                            _alt_offset;
@@ -191,4 +199,16 @@ private:
 
     void SimpleAtmosphere(const float alt, float &sigma, float &delta, float &theta);
     bool _add_backend(AP_Baro_Backend *backend);
+
+    float _get_delta_ISA_C(void) const { return _get_delta_ISA_C(_primary); }
+    float _get_delta_ISA_C(uint8_t instance) const { return sensors[instance].delta_ISA_C; }
+
+    float _get_external_temperature_C(void) const { return _get_external_temperature_C(_primary); }
+    float _get_external_temperature_C(uint8_t instance) const;
+
+    float _get_ground_altitude(void) const { return _get_ground_altitude(_primary); }
+    float _get_ground_altitude(uint8_t instance) const { return sensors[instance].ground_altitude; }
+
+    // returns the predicted ISA tempertature in C for a given altitude in meters
+    float _get_ISA_temperature_C(const float altitude) const;
 };

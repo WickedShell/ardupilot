@@ -104,6 +104,37 @@ bool AP_Arming_Plane::pre_arm_checks(bool display_failure)
         ret = false;
     }
 
+    if (is_positive(plane.g2.circular_fence_radius_km)) {
+        // sanity check that nothing in the mission will intentionally trigger a fence
+        AP_Mission::Mission_Command cmd;
+        const float circular_dist = plane.g2.circular_fence_radius_km * 1e3f;
+        const Location &home = AP::ahrs().get_home();
+        for (uint16_t i = 1; i < plane.mission.num_commands(); i++) {
+            if (plane.mission.read_cmd_from_storage(i, cmd) && AP_Mission::stored_in_location(cmd.id) &&
+                (cmd.id != MAV_CMD_NAV_TAKEOFF) && (cmd.id != MAV_CMD_NAV_VTOL_TAKEOFF) &&
+                (cmd.content.location.get_distance(home) > circular_dist)) {
+                check_failed(display_failure, "Mission item %d breaches circular fence", (int)i);
+                ret = false;
+                break;
+            }
+        }
+    }
+
+    if (is_positive(plane.g2.high_altitude_fence)) {
+        // sanity check that nothing in the mission will intentionally trigger a fence
+        AP_Mission::Mission_Command cmd;
+        int32_t item_alt_cm;
+        const int32_t alt_cm = (int)plane.g2.high_altitude_fence * 100;
+        for (uint16_t i = 1; i < plane.mission.num_commands(); i++) {
+            if (plane.mission.read_cmd_from_storage(i, cmd) && AP_Mission::stored_in_location(cmd.id) &&
+                cmd.content.location.get_alt_cm(Location::AltFrame::ABOVE_HOME, item_alt_cm) && (item_alt_cm > alt_cm)) {
+                check_failed(display_failure, "Mission item %d breaches altitude fence", (int)i);
+                ret = false;
+                break;
+            }
+        }
+    }
+
     return ret;
 }
 

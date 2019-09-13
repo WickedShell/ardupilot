@@ -1239,6 +1239,24 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("DSPOILER_AILMTCH", 21, ParametersG2, crow_flap_aileron_matching, 100),
 
+    // @Param: FENCE_CIRCLE_KM
+    // @DisplayName: Circular fence radius
+    // @Description: Circular fence radius in km. When the vehicle crosses this distance from home it will automatically change to RTL. If the vehicle was landing then it will continue the landing. 0 disables the fence.
+    // @Range: 0 100
+    // @Units: km
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("FENCE_CIRCLE_KM", 22, ParametersG2, circular_fence_radius_km, 0),
+
+    // @Param: FENCE_HIGH_ALT
+    // @DisplayName: High altitude fence radius
+    // @Description: High altitude fence. When the vehicle crosses this height above home it will automatically change to RTL. If the vehicle was landing then it will continue the landing. 0 disables the fence.
+    // @Range: 0 1000
+    // @Units: m
+    // @Increment: 10
+    // @User: Advanced
+    AP_GROUPINFO("FENCE_HIGH_ALT", 23, ParametersG2, high_altitude_fence, 0),
+
     AP_GROUPEND
 };
 

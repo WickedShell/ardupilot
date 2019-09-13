@@ -291,6 +291,22 @@ void Plane::one_second_loop()
             // reset the landing altitude correction
             landing.alt_offset = 0;
     }
+
+    if (is_positive(g2.circular_fence_radius_km)) {
+        if (ahrs.get_home().get_distance(current_loc) > (g2.circular_fence_radius_km * 1e3f) &&
+            ((control_mode != &mode_qland) && (control_mode != &mode_rtl) && (flight_stage != AP_Vehicle::FixedWing::FLIGHT_LAND))) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Breached circular fence");
+            set_mode(mode_rtl, ModeReason::FENCE_BREACHED);
+        }
+    }
+
+    if (is_positive(g2.high_altitude_fence)) {
+        if (((current_loc.alt - ahrs.get_home().alt) > (g2.high_altitude_fence * 1e2f)) &&
+            ((control_mode != &mode_qland) && (control_mode != &mode_rtl) && (flight_stage != AP_Vehicle::FixedWing::FLIGHT_LAND))) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Breached high altitude fence");
+            set_mode(mode_rtl, ModeReason::FENCE_BREACHED);
+        }
+    }
 }
 
 void Plane::compass_save()

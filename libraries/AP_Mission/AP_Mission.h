@@ -632,6 +632,8 @@ public:
         return (_options.get() & AP_MISSION_MASK_CONTINUE_AFTER_LAND) != 0;
     }
 
+    static bool stored_in_location(uint16_t id);
+
     // user settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -643,8 +645,6 @@ private:
     static AP_Mission *_singleton;
 
     static StorageAccess _storage;
-
-    static bool stored_in_location(uint16_t id);
 
     struct Mission_Flags {
         mission_state state;

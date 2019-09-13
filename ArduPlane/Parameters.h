@@ -564,6 +564,8 @@ public:
 
     // just to make compilation easier when all things are compiled out...
     uint8_t unused_integer;
+    AP_Float circular_fence_radius_km;
+    AP_Float high_altitude_fence;
 };
 
 extern const AP_Param::Info var_info[];

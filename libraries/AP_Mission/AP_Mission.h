@@ -480,6 +480,8 @@ public:
     // returns true if the mission contains the requested items
     bool contains_item(MAV_CMD command) const;
 
+    static bool stored_in_location(uint16_t id);
+
     // user settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -487,8 +489,6 @@ private:
     static AP_Mission *_singleton;
 
     static StorageAccess _storage;
-
-    static bool stored_in_location(uint16_t id);
 
     struct Mission_Flags {
         mission_state state;

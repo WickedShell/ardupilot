@@ -99,6 +99,8 @@ public:
         GPS_TYPE_HEMI = 16, // hemisphere NMEA
         GPS_TYPE_UBLOX_RTK_BASE = 17,
         GPS_TYPE_UBLOX_RTK_ROVER = 18,
+        GPS_TYPE_SBFINS = 19, // Septentrio gps with imu corrections (AsterRx-i S)
+        GPS_TYPE_SBFDUALANTENNA = 20, // Septentrio with dual antenna (AsteRx-m2a)
     };
 
     /// GPS status codes
@@ -149,6 +151,7 @@ public:
         uint32_t time_week_ms;              ///< GPS time (milliseconds from start of GPS week)
         uint16_t time_week;                 ///< GPS week number
         Location location;                  ///< last fix location
+        uint8_t atteulerMode;               ///< mode in which the Attitude is computed
         float ground_speed;                 ///< ground speed in m/sec
         float ground_course;                ///< ground course in degrees
         float gps_yaw;                      ///< GPS derived yaw information, if available (degrees)

@@ -77,7 +77,7 @@ private:
     uint16_t _read_fd_log_num;
     uint32_t _read_offset;
     uint32_t _write_offset;
-    volatile bool _open_error;
+    volatile uint32_t _open_error_ms;
     const char *_log_directory;
     bool _last_write_failed;
 
@@ -89,6 +89,9 @@ private:
 
     // should we rotate when we next stop logging
     bool _rotate_pending;
+
+    // do we have a recent open error?
+    bool recent_open_error(void) const;
 
     uint16_t _log_num_from_list_entry(const uint16_t list_entry);
 

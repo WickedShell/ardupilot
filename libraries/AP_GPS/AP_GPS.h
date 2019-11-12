@@ -431,6 +431,11 @@ public:
     // returns true if all GPS instances have passed all final arming checks/state changes
     bool prepare_for_arming(void);
 
+    // returns true if all GPS drivers are prefroming their logging appropriately
+    bool logging_healthy(void) const;
+
+    bool drivers_should_log(void) const { return _raw_data != 0; }
+
     // used to disable GPS for GPS failure testing in flight
     void force_disable(bool disable) {
         _force_disable_gps = disable;

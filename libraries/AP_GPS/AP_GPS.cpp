@@ -1656,6 +1656,20 @@ bool AP_GPS::prepare_for_arming(void) {
     return all_passed;
 }
 
+bool AP_GPS::logging_healthy(void) const {
+    if (!drivers_should_log()) {
+        return true;
+    }
+
+    for (uint8_t i = 0; i < GPS_MAX_RECEIVERS; i++) {
+        if ((drivers[i] != nullptr) && !(drivers[i]->logging_healthy())) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 namespace AP {
 
 AP_GPS &gps()

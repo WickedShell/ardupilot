@@ -68,27 +68,17 @@ private:
 
     int asterx_type;
 
-    uint8_t _init_blob_index = 0;
-    uint32_t _init_blob_time = 0;
-    const char* _initialisation_blob[5] = {
-    "sso, Stream1, COM1, PVTGeodetic+DOP+ReceiverStatus+VelCovGeodetic, msec100\n",
+    uint8_t _init_blob_index;
+    uint32_t _init_blob_time;
+    const char* _stream1_init;
+    const char* _initialisation_blob[4] = {
     "srd, Moderate, UAV\n",
     "sem, PVT, 5\n",
     "spm, Rover, all\n",
     "sso, Stream2, Dsk1, postprocess+event+comment+ReceiverStatus, msec100\n"};
-    const char* _initialisation_blob_i[5] = {
-    "sso, Stream1, COM1, PVTGeodetic+INSNavGeod+DOP+ReceiverStatus+VelCovGeodetic, msec100\n",
-    "srd, Moderate, UAV\n",
-    "sem, PVT, 5\n",
-    "spm, Rover, all\n",
-    "sso, Stream2, Dsk1, postprocess+event+comment+ReceiverStatus, msec100\n"};
-    const char* _initialisation_blob_dualantenna[5] = {
-    "sso, Stream1, COM1, PVTGeodetic+AttEuler+AtCovEuler+DOP+ReceiverStatus+VelCovGeodetic, msec100\n",
-    "srd, Moderate, UAV\n",
-    "sem, PVT, 5\n",
-    "spm, Rover, all\n",
-    "sso, Stream2, Dsk1, postprocess+event+comment+ReceiverStatus, msec100\n"};
-    const char* (*initialization_blob)[5];
+    const char* _stream1_normal = "sso, Stream1, COM1, PVTGeodetic+DOP+ReceiverStatus+VelCovGeodetic, msec100\n";
+    const char* _stream1_ins = "sso, Stream1, COM1, INSNavGeod+DOP+ReceiverStatus+VelCovGeodetic, msec100\n";
+    const char* _stream1_dualantenna = "sso, Stream1, COM1, PVTGeodetic+AttEuler+AtCovEuler+DOP+ReceiverStatus+VelCovGeodetic, msec100\n";
     uint32_t _config_last_ack_time;
 
     const char* _port_enable = "\nSSSSSSSSSS\n";

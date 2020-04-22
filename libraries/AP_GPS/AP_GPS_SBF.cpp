@@ -58,16 +58,14 @@ AP_GPS_SBF::AP_GPS_SBF(AP_GPS &_gps, AP_GPS::GPS_State &_state,
 
     switch(asterx_type) {
         case SBF_SINGLE_ANTENNA:
-            initialization_blob = &_initialisation_blob;
+        default:
+            _stream1_init = _stream1_normal;
             break;
         case SBF_DUAL_ANTENNA:
-            initialization_blob = &_initialisation_blob_dualantenna;
+            _stream1_init = _stream1_dualantenna;
             break;
         case SBF_INS:
-            initialization_blob = &_initialisation_blob_i;
-            break;
-        default:
-            initialization_blob = &_initialisation_blob;
+            _stream1_init = _stream1_ins;
             break;
     }
 
@@ -89,12 +87,10 @@ AP_GPS_SBF::read(void)
         ret |= parse(temp);
     }
 
-
-
     if (gps._auto_config != AP_GPS::GPS_AUTO_CONFIG_DISABLE) {
-        if (_init_blob_index < ARRAY_SIZE(initialization_blob)) {
+        if (_init_blob_index < ARRAY_SIZE(_initialisation_blob) + 1) {
             uint32_t now = AP_HAL::millis();
-            const char **init_str = initialization_blob[_init_blob_index];
+            const char *init_str = _init_blob_index == 0 ? _stream1_init : _initialisation_blob[_init_blob_index - 1];
 
             if (now > _init_blob_time) {
                 if (now > _config_last_ack_time + 2500) {
@@ -104,7 +100,7 @@ AP_GPS_SBF::read(void)
                     _config_last_ack_time = now;
                 } else {
                     Debug("SBF sending init string: %s", init_str);
-                    port->write((const uint8_t*)init_str, strlen(*init_str));
+                    port->write((const uint8_t*)init_str, strlen(init_str));
                 }
                 _init_blob_time = now + 1000;
             }
@@ -241,8 +237,9 @@ AP_GPS_SBF::parse(uint8_t temp)
 
                     // valid command, determine if it was the one we were trying
                     // to send in the configuration sequence
-                    if (_init_blob_index < ARRAY_SIZE(initialization_blob)) {
-                        if (!strncmp(*initialization_blob[_init_blob_index], (char *)(sbf_msg.data.bytes + 2),
+                    if (_init_blob_index < ARRAY_SIZE(_initialisation_blob) + 1) {
+                        const char *init_blob = _init_blob_index == 0 ? _stream1_init : _initialisation_blob[_init_blob_index - 1];
+                        if (!strncmp(init_blob, (char *)(sbf_msg.data.bytes + 2),
                                      sbf_msg.read - SBF_EXCESS_COMMAND_BYTES)) {
                             Debug("SBF Ack Command: %s\n", sbf_msg.data.bytes);
                             _init_blob_index++;
@@ -289,20 +286,16 @@ AP_GPS_SBF::process_message(void)
         // Update velocity state (don't use −2·10^10)
         if (temp.Vn > -200000) {
  
-            // if using the AsteRx-i we need to parse it from the INSNavGeod
-            if(asterx_type != SBF_INS){
-                state.velocity.x = (float)(temp.Vn);
-                state.velocity.y = (float)(temp.Ve);
-                state.velocity.z = (float)(-temp.Vu);
+            state.velocity.x = (float)(temp.Vn);
+            state.velocity.y = (float)(temp.Ve);
+            state.velocity.z = (float)(-temp.Vu);
 
-                state.have_vertical_velocity = true;
+            state.have_vertical_velocity = true;
 
-                float ground_vector_sq = state.velocity[0] * state.velocity[0] + state.velocity[1] * state.velocity[1];
-                state.ground_speed = (float)safe_sqrt(ground_vector_sq);
+            float ground_vector_sq = state.velocity[0] * state.velocity[0] + state.velocity[1] * state.velocity[1];
+            state.ground_speed = (float)safe_sqrt(ground_vector_sq);
 
-                state.ground_course = wrap_360(degrees(atan2f(state.velocity[1], state.velocity[0])));
-
-            }
+            state.ground_course = wrap_360(degrees(atan2f(state.velocity[1], state.velocity[0])));
             state.rtk_age_ms = temp.MeanCorrAge * 10;
 
             // value is expressed as twice the rms error = int16 * 0.01/2
@@ -532,15 +525,15 @@ AP_GPS_SBF::process_message(void)
 void AP_GPS_SBF::broadcast_configuration_failure_reason(void) const
 {
     if (gps._auto_config != AP_GPS::GPS_AUTO_CONFIG_DISABLE &&
-        _init_blob_index < ARRAY_SIZE(initialization_blob)) {
+        _init_blob_index < ARRAY_SIZE(_initialisation_blob) + 1) {
         gcs().send_text(MAV_SEVERITY_INFO, "GPS %u: SBF is not fully configured (%u/%u)", state.instance + 1,
-                        _init_blob_index, (unsigned)ARRAY_SIZE(initialization_blob));
+                        _init_blob_index, (unsigned)(ARRAY_SIZE(_initialisation_blob) + 1));
     }
 }
 
 bool AP_GPS_SBF::is_configured (void) {
     return (gps._auto_config == AP_GPS::GPS_AUTO_CONFIG_DISABLE ||
-             _init_blob_index >= ARRAY_SIZE(initialization_blob));
+             _init_blob_index >= ARRAY_SIZE(_initialisation_blob) + 1);
 }
 
 bool AP_GPS_SBF::is_healthy (void) const {

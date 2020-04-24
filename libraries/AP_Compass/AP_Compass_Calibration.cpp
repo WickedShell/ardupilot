@@ -200,37 +200,45 @@ bool Compass::_accept_calibration_mask(uint8_t mask)
 
 bool Compass::send_mag_cal_progress(const GCS_MAVLINK& link)
 {
-    uint8_t cal_mask = _get_cal_mask();
-
-    for (Priority compass_id(0); compass_id<COMPASS_MAX_INSTANCES; compass_id++) {
+    for (uint8_t i = 0; i < COMPASS_MAX_INSTANCES; i++) {
+        Priority compass_id = (next_cal_status_idx + 1) % COMPASS_MAX_INSTANCES;
         // ensure we don't try to send with no space available
-        if (!HAVE_PAYLOAD_SPACE(link.get_chan(), MAG_CAL_PROGRESS)) {
-            // ideally we would only send one progress message per
-            // call.  If we don't return true here we may end up
-            // hogging *all* the bandwidth
-            return true;
-        }
-
         auto& calibrator = _calibrator[compass_id];
         const CompassCalibrator::Status cal_status = calibrator.get_status();
 
         if (cal_status == CompassCalibrator::Status::WAITING_TO_START  ||
             cal_status == CompassCalibrator::Status::RUNNING_STEP_ONE ||
             cal_status == CompassCalibrator::Status::RUNNING_STEP_TWO) {
-            uint8_t completion_pct = calibrator.get_completion_percent();
+
+            if (!HAVE_PAYLOAD_SPACE(link.get_chan(), MAG_CAL_PROGRESS)) {
+                return false;
+            }
+
+            next_cal_status_idx = compass_id;
+
+            const uint8_t completion_pct = calibrator.get_completion_percent();
             const CompassCalibrator::completion_mask_t& completion_mask = calibrator.get_completion_mask();
-            const Vector3f direction;
             uint8_t attempt = _calibrator[compass_id].get_attempt();
 
             mavlink_msg_mag_cal_progress_send(
                 link.get_chan(),
-                uint8_t(compass_id), cal_mask,
-                (uint8_t)cal_status, attempt, completion_pct, completion_mask,
-                direction.x, direction.y, direction.z
-            );
+                uint8_t(compass_id), // id
+                _get_cal_mask(),     // bitmask of what is being calibrated
+                (uint8_t)cal_status, // status
+                attempt,             // attempt number
+                completion_pct,      // percentage complete
+                completion_mask,     // mask of sphere sections
+                0,                   // direction x
+                0,                   // direction y
+                0);                  // direction z
+
+            return true;
+        } else {
+            next_cal_status_idx = compass_id;
         }
     }
 
+    // all the calibrators were either idle or complete
     return true;
 }
 

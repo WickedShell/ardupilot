@@ -14,14 +14,6 @@ float AnalogSource::voltage_average() {
     return 5.0f * _v / 1024.0f;
 }
 
-float AnalogSource::voltage_latest() {
-    return 5.0f * _v / 1024.0f;
-}
-
-float AnalogSource::read_latest() {
-    return _v;
-}
-
 void AnalogSource::set_pin(uint8_t p)
 {}
 

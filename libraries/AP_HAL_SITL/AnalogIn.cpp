@@ -15,18 +15,6 @@ ADCSource::ADCSource(SITL_State *sitlState, int16_t pin) :
 {}
 
 float ADCSource::read_average() {
-    return read_latest();
-}
-
-float ADCSource::voltage_average() {
-    return (5.0f/1023.0f) * read_average();
-}
-
-float ADCSource::voltage_latest() {
-    return (5.0f/1023.0f) * read_latest();
-}
-
-float ADCSource::read_latest() {
     switch (_pin) {
     case ANALOG_INPUT_BOARD_VCC:
         return 1023;
@@ -56,6 +44,10 @@ float ADCSource::read_latest() {
     default:
         return 0.0f;
     }
+}
+
+float ADCSource::voltage_average() {
+    return (5.0f/1023.0f) * read_average();
 }
 
 void ADCSource::set_pin(uint8_t pin) {

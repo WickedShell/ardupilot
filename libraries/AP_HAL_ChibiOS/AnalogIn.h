@@ -29,7 +29,7 @@
 class ChibiOS::AnalogSource : public AP_HAL::AnalogSource {
 public:
     friend class ChibiOS::AnalogIn;
-    AnalogSource(int16_t pin, float initial_value);
+    AnalogSource(int16_t pin);
     float read_average() override;
     void set_pin(uint8_t p) override;
     float voltage_average() override;

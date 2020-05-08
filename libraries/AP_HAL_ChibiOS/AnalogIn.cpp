@@ -73,7 +73,6 @@ AnalogSource::AnalogSource(int16_t pin, float initial_value) :
     _pin(pin),
     _value(initial_value),
     _value_ratiometric(initial_value),
-    _latest_value(initial_value),
     _sum_count(0),
     _sum_value(0),
     _sum_ratiometric(0)
@@ -95,11 +94,6 @@ float AnalogSource::read_average()
     _sum_count = 0;
 
     return _value;
-}
-
-float AnalogSource::read_latest()
-{
-    return _latest_value;
 }
 
 /*
@@ -135,14 +129,6 @@ float AnalogSource::voltage_average_ratiometric()
     return _pin_scaler() * _value_ratiometric;
 }
 
-/*
-  return voltage in Volts
- */
-float AnalogSource::voltage_latest()
-{
-    return _pin_scaler() * read_latest();
-}
-
 void AnalogSource::set_pin(uint8_t pin)
 {
     if (_pin == pin) {
@@ -153,7 +139,6 @@ void AnalogSource::set_pin(uint8_t pin)
     _sum_value = 0;
     _sum_ratiometric = 0;
     _sum_count = 0;
-    _latest_value = 0;
     _value = 0;
     _value_ratiometric = 0;
 }
@@ -165,7 +150,6 @@ void AnalogSource::_add_value(float v, float vcc5V)
 {
     WITH_SEMAPHORE(_semaphore);
 
-    _latest_value = v;
     _sum_value += v;
     if (vcc5V < 3.0f) {
         _sum_ratiometric += v;

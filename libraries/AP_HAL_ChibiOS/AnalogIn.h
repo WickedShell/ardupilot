@@ -31,10 +31,8 @@ public:
     friend class ChibiOS::AnalogIn;
     AnalogSource(int16_t pin, float initial_value);
     float read_average() override;
-    float read_latest() override;
     void set_pin(uint8_t p) override;
     float voltage_average() override;
-    float voltage_latest() override;
     float voltage_average_ratiometric() override;
 
 private:
@@ -42,7 +40,6 @@ private:
     int16_t _pin;
     float _value;
     float _value_ratiometric;
-    float _latest_value;
     uint8_t _sum_count;
     float _sum_value;
     float _sum_ratiometric;

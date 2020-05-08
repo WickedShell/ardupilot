@@ -16,20 +16,10 @@ void AnalogSource_ADS1115::set_pin(uint8_t pin)
 
 float AnalogSource_ADS1115::read_average()
 {
-    return read_latest();
-}
-
-float AnalogSource_ADS1115::read_latest()
-{
     return _value;
 }
 
 float AnalogSource_ADS1115::voltage_average()
-{
-    return _value;
-}
-
-float AnalogSource_ADS1115::voltage_latest()
 {
     return _value;
 }

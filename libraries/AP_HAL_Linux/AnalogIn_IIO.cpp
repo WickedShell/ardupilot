@@ -49,22 +49,6 @@ void AnalogSource_IIO::select_pin(void)
 
 float AnalogSource_IIO::read_average()
 {
-    read_latest();
-    WITH_SEMAPHORE(_semaphore);
-
-    if (_sum_count == 0) {
-        return _value;
-    }
-
-    _value = _sum_value / _sum_count;
-    _sum_value = 0;
-    _sum_count = 0;
-
-    return _value;
-}
-
-float AnalogSource_IIO::read_latest()
-{
     char sbuf[10];
 
     if (_pin_fd == -1) {
@@ -83,19 +67,21 @@ float AnalogSource_IIO::read_latest()
     _sum_value += _latest;
     _sum_count++;
 
-    return _latest;
+    if (_sum_count == 0) {
+        return _value;
+    }
+
+    _value = _sum_value / _sum_count;
+    _sum_value = 0;
+    _sum_count = 0;
+
+    return _value;
 }
 
 // output is in volts
 float AnalogSource_IIO::voltage_average()
 {
     return read_average();
-}
-
-float AnalogSource_IIO::voltage_latest()
-{
-    read_latest();
-    return _latest;
 }
 
 void AnalogSource_IIO::set_pin(uint8_t pin)

@@ -11,10 +11,8 @@ public:
     friend class AnalogIn_Navio2;
     AnalogSource_Navio2(uint8_t pin);
     float read_average() override;
-    float read_latest() override;
     void set_pin(uint8_t p) override;
     float voltage_average() override;
-    float voltage_latest() override;
     float voltage_average_ratiometric() override;
 private:
     void set_channel(uint8_t pin);

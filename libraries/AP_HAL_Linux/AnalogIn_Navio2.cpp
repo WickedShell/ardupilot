@@ -55,11 +55,6 @@ void AnalogSource_Navio2::set_pin(uint8_t pin)
 
 float AnalogSource_Navio2::read_average()
 {
-    return read_latest();
-}
-
-float AnalogSource_Navio2::read_latest()
-{
     return voltage_average();
 }
 
@@ -77,12 +72,6 @@ float AnalogSource_Navio2::voltage_average()
 
     _value = atoi(buffer) / 1000.0f;
 
-    return _value;
-}
-
-float AnalogSource_Navio2::voltage_latest()
-{
-    read_latest();
     return _value;
 }
 

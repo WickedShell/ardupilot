@@ -827,6 +827,7 @@ void AP_Logger_File::PrepForArming()
  */
 uint16_t AP_Logger_File::start_new_log(void)
 {
+    EXPECT_DELAY_MS(5000U);
     stop_logging();
 
     start_new_log_reset_variables();

@@ -141,7 +141,8 @@ void AP_Logger_File::periodic_1Hz()
     if (_write_fd == -1 && _read_fd == -1 &&
         logging_enabled() &&
         !recent_open_error() &&
-        !hal.util->get_soft_armed()) {
+        !hal.util->get_soft_armed() &&
+        (hal.util->safety_switch_state() == AP_HAL::Util::SAFETY_DISARMED)) {
         // retry logging open. This allows for booting with
         // LOG_DISARMED=1 with a bad microSD or no microSD. Once a
         // card is inserted then logging starts

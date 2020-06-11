@@ -192,23 +192,24 @@ bool Compass::_accept_calibration_mask(uint8_t mask)
 
 bool Compass::send_mag_cal_progress(const GCS_MAVLINK& link)
 {
-    uint8_t cal_mask = _get_cal_mask();
+    const uint8_t chan = link.get_chan();
 
-    for (uint8_t compass_id=0; compass_id<COMPASS_MAX_INSTANCES; compass_id++) {
-        // ensure we don't try to send with no space available
-        if (!HAVE_PAYLOAD_SPACE(link.get_chan(), MAG_CAL_PROGRESS)) {
-            // ideally we would only send one progress message per
-            // call.  If we don't return true here we may end up
-            // hogging *all* the bandwidth
-            return true;
-        }
-
+    for (uint8_t i = 0; i < COMPASS_MAX_INSTANCES; i++) {
+        uint8_t compass_id = (next_cal_status_idx[chan] + 1) % COMPASS_MAX_INSTANCES;
         auto& calibrator = _calibrator[compass_id];
         const CompassCalibrator::Status cal_status = calibrator.get_status();
 
         if (cal_status == CompassCalibrator::Status::WAITING_TO_START  ||
             cal_status == CompassCalibrator::Status::RUNNING_STEP_ONE ||
             cal_status == CompassCalibrator::Status::RUNNING_STEP_TWO) {
+
+            // ensure we don't try to send with no space available
+            if (!HAVE_PAYLOAD_SPACE(link.get_chan(), MAG_CAL_PROGRESS)) {
+                return false;
+            }
+
+            next_cal_status_idx[chan] = compass_id;
+
             uint8_t completion_pct = calibrator.get_completion_percent();
             const CompassCalibrator::completion_mask_t& completion_mask = calibrator.get_completion_mask();
             const Vector3f direction;
@@ -216,10 +217,12 @@ bool Compass::send_mag_cal_progress(const GCS_MAVLINK& link)
 
             mavlink_msg_mag_cal_progress_send(
                 link.get_chan(),
-                compass_id, cal_mask,
+                compass_id, _get_cal_mask(),
                 (uint8_t)cal_status, attempt, completion_pct, completion_mask,
                 direction.x, direction.y, direction.z
             );
+        } else {
+            next_cal_status_idx[chan] = compass_id;
         }
     }
 
@@ -228,21 +231,22 @@ bool Compass::send_mag_cal_progress(const GCS_MAVLINK& link)
 
 bool Compass::send_mag_cal_report(const GCS_MAVLINK& link)
 {
-    uint8_t cal_mask = _get_cal_mask();
+    const uint8_t chan = link.get_chan();
 
-    for (uint8_t compass_id=0; compass_id<COMPASS_MAX_INSTANCES; compass_id++) {
-        // ensure we don't try to send with no space available
-        if (!HAVE_PAYLOAD_SPACE(link.get_chan(), MAG_CAL_REPORT)) {
-            // ideally we would only send one progress message per
-            // call.  If we don't return true here we may end up
-            // hogging *all* the bandwidth
-            return true;
-        }
-
+    for (uint8_t i = 0; i < COMPASS_MAX_INSTANCES; i++) {
+        uint8_t compass_id = (next_cal_report_idx[chan] + 1) % COMPASS_MAX_INSTANCES;
         const CompassCalibrator::Status cal_status = _calibrator[compass_id].get_status();
         if (cal_status == CompassCalibrator::Status::SUCCESS ||
             cal_status == CompassCalibrator::Status::FAILED ||
             cal_status == CompassCalibrator::Status::BAD_ORIENTATION) {
+
+            // ensure we don't try to send with no space available
+            if (!HAVE_PAYLOAD_SPACE(link.get_chan(), MAG_CAL_REPORT)) {
+                return false;
+            }
+
+            next_cal_report_idx[chan] = compass_id;
+
             float fitness = _calibrator[compass_id].get_fitness();
             Vector3f ofs, diag, offdiag;
             float scale_factor;
@@ -251,7 +255,7 @@ bool Compass::send_mag_cal_report(const GCS_MAVLINK& link)
 
             mavlink_msg_mag_cal_report_send(
                 link.get_chan(),
-                compass_id, cal_mask,
+                compass_id, _get_cal_mask(),
                 (uint8_t)cal_status, autosaved,
                 fitness,
                 ofs.x, ofs.y, ofs.z,
@@ -262,6 +266,8 @@ bool Compass::send_mag_cal_report(const GCS_MAVLINK& link)
                 _calibrator[compass_id].get_orientation(),
                 scale_factor
             );
+        } else {
+            next_cal_report_idx[chan] = compass_id;
         }
     }
     return true;

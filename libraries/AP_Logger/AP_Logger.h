@@ -239,6 +239,7 @@ public:
                         const int16_t x[32],
                         const int16_t y[32],
                         const int16_t z[32]);
+    void Write_Vibration(uint8_t instance);
     void Write_Vibration();
     void Write_RCIN(void);
     void Write_RCOUT(void);

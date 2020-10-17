@@ -87,6 +87,7 @@ void ModeShipOperation::run()
     } else {
         if (ship_takeoff) {
             target_climb_rate = g.pilot_speed_up;
+            copter.set_auto_armed(true);
         } else {
             target_climb_rate = -get_pilot_speed_dn();
         }

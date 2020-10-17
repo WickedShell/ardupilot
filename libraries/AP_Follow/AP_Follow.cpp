@@ -340,6 +340,11 @@ bool AP_Follow::handle_msg(const mavlink_message_t &msg)
         return false;
     }
 
+    // skip if it's not a message we want
+    if (msg.msgid != MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
+        return false;
+    }
+
     // skip our own messages
     if (msg.sysid == mavlink_system.sysid) {
         return false;
@@ -356,77 +361,72 @@ bool AP_Follow::handle_msg(const mavlink_message_t &msg)
         return false;
     }
 
-    // decode global-position-int message
-    if (msg.msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
+    // get estimated location and velocity (for logging)
+    Location loc_estimate{};
+    Vector3f vel_estimate;
+    UNUSED_RESULT(get_target_location_and_velocity(loc_estimate, vel_estimate));
 
-        // get estimated location and velocity (for logging)
-        Location loc_estimate{};
-        Vector3f vel_estimate;
-        UNUSED_RESULT(get_target_location_and_velocity(loc_estimate, vel_estimate));
+    // decode message
+    mavlink_global_position_int_t packet;
+    mavlink_msg_global_position_int_decode(&msg, &packet);
 
-        // decode message
-        mavlink_global_position_int_t packet;
-        mavlink_msg_global_position_int_decode(&msg, &packet);
-
-        // ignore message if lat and lon are (exactly) zero
-        if ((packet.lat == 0 && packet.lon == 0)) {
-            return false;
-        }
-
-        _target_location.lat = packet.lat;
-        _target_location.lng = packet.lon;
-
-        // remember absolute alt
-        _target_alt_cm = packet.alt / 10;
-
-        // select altitude source based on FOLL_ALT_TYPE param
-        if (_alt_type == AP_FOLLOW_ALTITUDE_TYPE_RELATIVE) {
-            // relative altitude
-            _target_location.alt = packet.relative_alt / 10;        // convert millimeters to cm
-            _target_location.relative_alt = true;                // set relative_alt flag
-        } else {
-            // absolute altitude
-            _target_location.alt = packet.alt / 10;                 // convert millimeters to cm
-            _target_location.relative_alt = false;                // reset relative_alt flag
-        }
-
-        _target_velocity_ned.x = packet.vx * 0.01f; // velocity north
-        _target_velocity_ned.y = packet.vy * 0.01f; // velocity east
-        _target_velocity_ned.z = packet.vz * 0.01f; // velocity down
-
-        // get a local timestamp with correction for transport jitter
-        _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.time_boot_ms, AP_HAL::millis());
-        if (packet.hdg <= 36000) {                  // heading (UINT16_MAX if unknown)
-            _target_heading = packet.hdg * 0.01f;   // convert centi-degrees to degrees
-            _last_heading_update_ms = _last_location_update_ms;
-        }
-        // initialise _sysid if zero to sender's id
-        if (_sysid == 0) {
-            _sysid.set(msg.sysid);
-            _automatic_sysid = true;
-        }
-
-        // log lead's estimated vs reported position
-        AP::logger().Write("FOLL",
-                           "TimeUS,Lat,Lon,Alt,VelN,VelE,VelD,LatE,LonE,AltE,Hdg",  // labels
-                           "sDUmnnnDUmd",    // units
-                           "F--B000--B0",    // mults
-                           "QLLifffLLif",    // fmt
-                           AP_HAL::micros64(),
-                           _target_location.lat,
-                           _target_location.lng,
-                           _target_location.alt,
-                           _target_velocity_ned.x,
-                           _target_velocity_ned.y,
-                           _target_velocity_ned.z,
-                           loc_estimate.lat,
-                           loc_estimate.lng,
-                           loc_estimate.alt,
-                           _target_heading
-            );
-        return true;
+    // ignore message if lat and lon are (exactly) zero
+    if ((packet.lat == 0 && packet.lon == 0)) {
+        return false;
     }
-    return false;
+
+    _target_location.lat = packet.lat;
+    _target_location.lng = packet.lon;
+
+    // remember absolute alt
+    _target_alt_cm = packet.alt / 10;
+
+    // select altitude source based on FOLL_ALT_TYPE param
+    if (_alt_type == AP_FOLLOW_ALTITUDE_TYPE_RELATIVE) {
+        // relative altitude
+        _target_location.alt = packet.relative_alt / 10;        // convert millimeters to cm
+        _target_location.relative_alt = true;                // set relative_alt flag
+    } else {
+        // absolute altitude
+        _target_location.alt = packet.alt / 10;                 // convert millimeters to cm
+        _target_location.relative_alt = false;                // reset relative_alt flag
+    }
+
+    _target_velocity_ned.x = packet.vx * 0.01f; // velocity north
+    _target_velocity_ned.y = packet.vy * 0.01f; // velocity east
+    _target_velocity_ned.z = packet.vz * 0.01f; // velocity down
+
+    // get a local timestamp with correction for transport jitter
+    _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.time_boot_ms, AP_HAL::millis());
+    if (packet.hdg <= 36000) {                  // heading (UINT16_MAX if unknown)
+        _target_heading = packet.hdg * 0.01f;   // convert centi-degrees to degrees
+        _last_heading_update_ms = _last_location_update_ms;
+    }
+    // initialise _sysid if zero to sender's id
+    if (_sysid == 0) {
+        _sysid.set(msg.sysid);
+        _automatic_sysid = true;
+    }
+
+    // log lead's estimated vs reported position
+    AP::logger().Write("FOLL",
+                       "TimeUS,Lat,Lon,Alt,VelN,VelE,VelD,LatE,LonE,AltE,Hdg",  // labels
+                       "sDUmnnnDUmd",    // units
+                       "F--B000--B0",    // mults
+                       "QLLifffLLif",    // fmt
+                       AP_HAL::micros64(),
+                       _target_location.lat,
+                       _target_location.lng,
+                       _target_location.alt,
+                       _target_velocity_ned.x,
+                       _target_velocity_ned.y,
+                       _target_velocity_ned.z,
+                       loc_estimate.lat,
+                       loc_estimate.lng,
+                       loc_estimate.alt,
+                       _target_heading
+        );
+    return true;
 }
 
 // get velocity estimate in m/s in NED frame using dt since last update

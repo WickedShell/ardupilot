@@ -120,6 +120,10 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
+    enum class YawSource : uint8_t {
+        MAVLink     = 0,
+        GroundTrack = 1,
+    };
 
     static AP_Follow *_singleton;
 
@@ -148,6 +152,7 @@ private:
     AP_Int8     _alt_type;          // altitude source for follow mode
     AC_P        _p_pos;             // position error P controller
     AP_Float    _path_tc;           // time constant used to update the path
+    AP_Int8     _yaw_source;        // source of yaw data
 
     // local variables
     bool _healthy;                  // true if we are receiving mavlink messages (regardless of whether they have target position info within them)

@@ -130,6 +130,14 @@ const AP_Param::GroupInfo AP_Follow::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_PATH_TC", 11, AP_Follow, _path_tc, 1.0f),
 
+#if !(APM_BUILD_TYPE(APM_BUILD_APMrover2))
+    // @Param: _YAW_SOURCE
+    // @DisplayName: Follow yaw source
+    // @Description: Follow yaw source
+    // @Values: 0:MAVLink message,1:Computed from ground track
+    // @User: Standard
+    AP_GROUPINFO("_YAW_SOURCE", 12, AP_Follow, _yaw_source, 0),
+#endif
     AP_GROUPEND
 };
 
@@ -398,9 +406,24 @@ bool AP_Follow::handle_msg(const mavlink_message_t &msg)
 
     // get a local timestamp with correction for transport jitter
     _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.time_boot_ms, AP_HAL::millis());
-    if (packet.hdg <= 36000) {                  // heading (UINT16_MAX if unknown)
-        _target_heading = packet.hdg * 0.01f;   // convert centi-degrees to degrees
-        _last_heading_update_ms = _last_location_update_ms;
+    switch (YawSource(_yaw_source.get())) {
+        case YawSource::MAVLink:
+            if (packet.hdg <= 36000) {                  // heading (UINT16_MAX if unknown)
+                _target_heading = packet.hdg * 0.01f;   // convert centi-degrees to degrees
+                _last_heading_update_ms = _last_location_update_ms;
+            }
+            break;
+        case YawSource::GroundTrack:
+            {
+                const float new_heading = degrees(atan2f(_target_velocity_ned.y, _target_velocity_ned.x));
+                if ((_last_location_update_ms - _last_heading_update_ms) > 1000) {
+                   _target_heading = new_heading;
+                } else {
+                    _target_heading = (_target_heading * 0.75f) + (new_heading * 0.25f);
+                }
+                _last_heading_update_ms = _last_location_update_ms;
+            }
+            break;
     }
     // initialise _sysid if zero to sender's id
     if (_sysid == 0) {

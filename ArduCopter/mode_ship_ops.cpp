@@ -59,9 +59,8 @@ void ModeShipOperation::exit()
 
 void ModeShipOperation::run()
 {
-    float takeoff_climb_rate;
-    float nav_roll;
-    float nav_pitch;
+    float nav_roll = 0;
+    float nav_pitch = 0;;
 
     Vector3f desired_velocity_neu_cms;
     float yaw_cd = attitude_control->get_att_target_euler_cd().z;
@@ -167,11 +166,13 @@ void ModeShipOperation::run()
         break;
 
     case AltHold_Takeoff:
+        {
         // initiate take-off
         if (!takeoff.running()) {
             takeoff.start(constrain_float(MAX(g.pilot_takeoff_alt, g2.wp_navalt_min * 100), 0.0f, 1000.0f));
         }
 
+        float takeoff_climb_rate;
         // get take-off adjusted pilot and takeoff climb rates
         takeoff.get_climb_rates(target_climb_rate, takeoff_climb_rate);
 
@@ -181,6 +182,7 @@ void ModeShipOperation::run()
         // tell the position controller that we have limited roll/pitch demand to prevent integrator buildup
         pos_control->init_pos_vel_xy();
         offset = pos_control->get_pos_target() - pos_with_ofs;
+        }
         break;
 
     case AltHold_Flying:

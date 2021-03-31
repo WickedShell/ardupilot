@@ -57,6 +57,11 @@ public:
     virtual bool disarm();
     bool is_armed();
 
+    // fetch how long we have been armed for
+    // returns 0 if disarmed
+    // NOTE: this can wrap on long missions
+    uint32_t armed_time_ms();
+
     // get bitmask of enabled checks
     uint16_t get_enabled_checks();
 
@@ -162,6 +167,8 @@ private:
         MIS_ITEM_CHECK_RALLY         = (1 << 5),
         MIS_ITEM_CHECK_MAX
     };
+
+    uint32_t armed_at_ms;
 };
 
 namespace AP {

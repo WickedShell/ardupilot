@@ -879,6 +879,8 @@ bool AP_Arming::arm(AP_Arming::Method method, const bool do_arming_checks)
     if ((!do_arming_checks && mandatory_checks(true)) || (pre_arm_checks(true) && arm_checks(method))) {
         armed = true;
 
+        armed_at_ms = AP_HAL::millis();
+
         //TODO: Log motor arming
         //Can't do this from this class until there is a unified logging library
 
@@ -972,6 +974,13 @@ void AP_Arming::Log_Write_Arm_Disarm()
         arm_checks              : get_enabled_checks()
     };
     AP::logger().WriteCriticalBlock(&pkt, sizeof(pkt));
+}
+
+uint32_t AP_Arming::armed_time_ms() {
+    if (is_armed()) {
+        return AP_HAL::millis() - armed_at_ms;
+    }
+    return 0;
 }
 
 AP_Arming *AP_Arming::_singleton = nullptr;

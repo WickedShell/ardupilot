@@ -22,7 +22,12 @@
 #include "AP_MotorsMulticopter.h"
 #include <AP_HAL/AP_HAL.h>
 #include <AP_BattMonitor/AP_BattMonitor.h>
+#include <AP_BoardConfig/AP_BoardConfig_CAN.h>
+#if HAL_WITH_UAVCAN
+  #include <AP_UAVCAN/AP_UAVCAN.h>
+#endif // HAL_WITH_UAVCAN
 
+#include <GCS_MAVLink/GCS.h>
 extern const AP_HAL::HAL& hal;
 
 // parameters for the motor class
@@ -211,6 +216,22 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @Increment: 0.001
     // @User: Advanced
     AP_GROUPINFO("SAFE_TIME", 42, AP_MotorsMulticopter, _safe_time, AP_MOTORS_SAFE_TIME_DEFAULT),
+
+    // @Param: MIN_RPM
+    // @DisplayName: Minimum motor RPM
+    // @Description: Minimum RPM the motor should be achieving after spinning up
+    // @Range: 60 5000
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("MIN_RPM", 43, AP_MotorsMulticopter, _min_rpm, 0),
+
+    // @Param: MAX_RPM
+    // @DisplayName: Maximum motor RPM
+    // @Description: Maximum RPM the motor should be achieving after spinning up
+    // @Range: 60 5000
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("MAX_RPM", 44, AP_MotorsMulticopter, _min_rpm, 0),
 
     AP_GROUPEND
 };
@@ -563,6 +584,7 @@ void AP_MotorsMulticopter::output_logic()
         // initialise motor failure variables
         _thrust_boost = false;
         _thrust_boost_ratio = 0.0f;
+        _rpm_valid = true;
         break;
 
     case SpoolState::GROUND_IDLE: {
@@ -593,6 +615,36 @@ void AP_MotorsMulticopter::output_logic()
             // constrain ramp value and update mode
             if (_spin_up_ratio >= 1.0f) {
                 _spin_up_ratio = 1.0f;
+#if HAL_WITH_UAVCAN
+                const uint8_t can_num_drivers = AP::can().get_num_drivers();
+                uint16_t rpm = 0;
+                if (_min_rpm > 0) {
+                    for (uint8_t i = 0; i < can_num_drivers; i++) {
+                        AP_UAVCAN *uavcan = AP_UAVCAN::get_uavcan(i);
+                        if (uavcan != nullptr) {
+                            // just assume a multicopter for now
+                            for (uint8_t motor = 0; motor < 4; i++) {
+                                if (uavcan->get_rpm(motor, rpm) && (rpm < _min_rpm)) {
+                                    _rpm_valid = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (_max_rpm > 0) {
+                    for (uint8_t i = 0; i < can_num_drivers; i++) {
+                        AP_UAVCAN *uavcan = AP_UAVCAN::get_uavcan(i);
+                        if (uavcan != nullptr) {
+                            // just assume a multicopter for now
+                            for (uint8_t motor = 0; motor < 4; i++) {
+                                if (uavcan->get_rpm(motor, rpm) && (rpm > _max_rpm)) {
+                                    _rpm_valid = false;
+                                }
+                            }
+                        }
+                    }
+                }
+#endif // HAL_WITH_UAVCAN
                 _spool_state = SpoolState::SPOOLING_UP;
             }
             break;
@@ -635,6 +687,7 @@ void AP_MotorsMulticopter::output_logic()
 
         // constrain ramp value and update mode
         if (_throttle_thrust_max >= MIN(get_throttle(), get_current_limit_max_throttle())) {
+            gcs().send_text(MAV_SEVERITY_INFO, "%f >= MIN(%f, %f)", _throttle_thrust_max, get_throttle(), get_current_limit_max_throttle());
             _throttle_thrust_max = get_current_limit_max_throttle();
             _spool_state = SpoolState::THROTTLE_UNLIMITED;
         } else if (_throttle_thrust_max < 0.0f) {

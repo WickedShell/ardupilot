@@ -41,6 +41,8 @@ public:
     // output_min - sends minimum values out to the motors
     void                output_min() override;
 
+    bool                rpm_valid() override { return _rpm_valid; };
+
     // set_yaw_headroom - set yaw headroom (yaw is given at least this amount of pwm)
     void                set_yaw_headroom(int16_t pwm) { _yaw_headroom = pwm; }
 
@@ -166,6 +168,8 @@ protected:
     AP_Float            _throttle_hover;        // estimated throttle required to hover throttle in the range 0 ~ 1
     AP_Int8             _throttle_hover_learn;  // enable/disabled hover thrust learning
     AP_Int8             _disarm_disable_pwm;    // disable PWM output while disarmed
+    AP_Int32            _min_rpm;               // minimum spin RPM
+    AP_Int32            _max_rpm;               // maximum spin RPM
 
     // Maximum lean angle of yaw servo in degrees. This is specific to tricopter
     AP_Float            _yaw_servo_angle_max_deg;
@@ -181,6 +185,7 @@ protected:
     int16_t             _throttle_radio_min;        // minimum PWM from RC input's throttle channel (i.e. minimum PWM input from receiver, RC3_MIN)
     int16_t             _throttle_radio_max;        // maximum PWM from RC input's throttle channel (i.e. maximum PWM input from receiver, RC3_MAX)
     // spool variables
+    bool _rpm_valid; // true if the RPM is passing spool up checks
 
     // spool variables
     float               _spin_up_ratio;      // throttle percentage (0 ~ 1) between zero and throttle_min

@@ -1760,7 +1760,23 @@ void QuadPlane::update(void)
         const uint32_t now = AP_HAL::millis();
 
         assisted_flight = false;
-        
+
+        // if we are spooling up then check that the motor spun appropriately
+        if ((motors->get_spool_state() == AP_Motors::SpoolState::SPOOLING_UP) && !motors->rpm_valid()) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "Motor failure detected");
+            // select a resolution to the problem
+
+            // if we think we are taking off just disarm
+            const uint32_t max_time_since_arming = 2000;
+            if ((AP::arming().armed_time_ms() < max_time_since_arming)
+                && (plane.relative_ground_altitude(plane.g.rangefinder_landing) < 1)) {
+                gcs().send_text(MAV_SEVERITY_INFO, "Motor failure resolution: disarm");
+            } else {
+                // Not sure where we might be, just trust RTL to sort us out
+                gcs().send_text(MAV_SEVERITY_INFO, "Motor failure resolution: RTL");
+            }
+        }
+
         // output to motors
         motors_output();
 
@@ -1819,6 +1835,10 @@ void QuadPlane::update(void)
     }
 
     tiltrotor_update();
+
+    if (motors->get_spool_state() == AP_Motors::SpoolState::SPOOLING_UP) {
+        gcs().send_text(MAV_SEVERITY_INFO, "Spooling");
+    }
 }
 
 /*

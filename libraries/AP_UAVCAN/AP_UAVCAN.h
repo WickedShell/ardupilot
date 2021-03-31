@@ -97,6 +97,8 @@ public:
     // send RTCMStream packets
     void send_RTCMStream(const uint8_t *data, uint32_t len);
 
+    static bool get_rpm(uint8_t esc_idx, uint16_t &rpm);
+
     template <typename DataType_>
     class RegistryBinder {
     protected:

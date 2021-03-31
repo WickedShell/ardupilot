@@ -322,6 +322,18 @@ void AP_UAVCAN::init(uint8_t driver_index, bool enable_filters)
     debug_uavcan(2, "UAVCAN: init done\n\r");
 }
 
+bool AP_UAVCAN::get_rpm(uint8_t esc_idx, uint16_t &rpm)
+{
+    if (!is_esc_data_index_valid(esc_idx)) {
+        return false;
+    }
+
+    WITH_SEMAPHORE(_telem_sem);
+
+    rpm = _escs_data[esc_idx].rpm;
+    return true;
+}
+
 // send ESC telemetry messages over MAVLink
 void AP_UAVCAN::send_esc_telemetry_mavlink(uint8_t mav_chan)
 {
@@ -826,7 +838,7 @@ void AP_UAVCAN::handle_actuator_status(AP_UAVCAN* ap_uavcan, uint8_t node_id, co
 void AP_UAVCAN::handle_ESC_status(AP_UAVCAN* ap_uavcan, uint8_t node_id, const ESCStatusCb &cb)
 {
     const uint8_t esc_index = cb.msg->esc_index;
-    
+
     // log as CESC message
     AP::logger().Write_ESCStatus(AP_HAL::micros64(),
                                  esc_index,

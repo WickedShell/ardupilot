@@ -231,7 +231,7 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @Range: 60 5000
     // @Increment: 1
     // @User: Advanced
-    AP_GROUPINFO("MAX_RPM", 44, AP_MotorsMulticopter, _min_rpm, 0),
+    AP_GROUPINFO("MAX_RPM", 44, AP_MotorsMulticopter, _max_rpm, 0),
 
     AP_GROUPEND
 };
@@ -623,8 +623,8 @@ void AP_MotorsMulticopter::output_logic()
                         AP_UAVCAN *uavcan = AP_UAVCAN::get_uavcan(i);
                         if (uavcan != nullptr) {
                             // just assume a multicopter for now
-                            for (uint8_t motor = 0; motor < 4; i++) {
-                                if (uavcan->get_rpm(motor, rpm) && (rpm < _min_rpm)) {
+                            for (uint8_t motor = 0; motor < 4; motor++) {
+                                if (!(uavcan->get_rpm(motor, rpm)) || ((uint32_t)rpm < _min_rpm.get())) {
                                     _rpm_valid = false;
                                 }
                             }

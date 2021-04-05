@@ -330,6 +330,11 @@ bool AP_UAVCAN::get_rpm(uint8_t esc_idx, uint16_t &rpm)
 
     WITH_SEMAPHORE(_telem_sem);
 
+    // ESC data must be within the last 100 ms
+    if ((AP_HAL::millis() - _escs_data[esc_idx].updated_ms) > 100) {
+        return false;
+    }
+
     rpm = _escs_data[esc_idx].rpm;
     return true;
 }
@@ -856,6 +861,7 @@ void AP_UAVCAN::handle_ESC_status(AP_UAVCAN* ap_uavcan, uint8_t node_id, const E
     }
 
     esc_data &esc = _escs_data[esc_index];
+    esc.updated_ms = AP_HAL::millis();
     esc.available = true;
     esc.temp = (cb.msg->temperature - C_TO_KELVIN);
     esc.voltage = cb.msg->voltage*100;

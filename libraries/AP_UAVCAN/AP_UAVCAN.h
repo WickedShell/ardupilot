@@ -233,12 +233,13 @@ private:
     static HAL_Semaphore _telem_sem;
 
     struct esc_data {
-        uint8_t temp;
+        uint32_t updated_ms;
         uint16_t voltage;
         uint16_t current;
         uint16_t total_current;
         uint16_t rpm;
         uint16_t count; //count of telemetry packets received (wraps at 65535).
+        uint8_t temp;
         bool available;
     };
 

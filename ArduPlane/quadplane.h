@@ -536,6 +536,8 @@ private:
 
     float last_land_final_agl;
 
+    bool triggered_rpm_failsafe;
+
     /*
       return true if current mission item is a vtol takeoff
      */

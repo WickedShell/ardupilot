@@ -335,7 +335,7 @@ void AP_GPS::init(const AP_SerialManager& serial_manager)
             uart_idx++;
         }
     }
-    _last_instance_swap_ms = 0;
+    _gps_swap_ms = 0;
 
     // Initialise class variables used to do GPS blending
     _omega_lpf = 1.0f / constrain_float(_blend_tc, 5.0f, 30.0f);
@@ -861,7 +861,7 @@ void AP_GPS::update_primary(void)
             state[i].status == GPS_OK_FIX_3D_RTK_FIXED &&
             state[i].have_gps_yaw) {
             if (primary_instance != i) {
-                _last_instance_swap_ms = now;
+                _gps_swap_ms = now;
                 primary_instance = i;
             }
             return;
@@ -876,7 +876,7 @@ void AP_GPS::update_primary(void)
             if ((state[i].status > state[primary_instance].status) ||
                 ((state[i].status == state[primary_instance].status) && (state[i].num_sats > state[primary_instance].num_sats))) {
                 primary_instance = i;
-                _last_instance_swap_ms = now;
+                _gps_swap_ms = now;
             }
         }
         return;
@@ -890,32 +890,43 @@ void AP_GPS::update_primary(void)
         if (state[i].status > state[primary_instance].status) {
             // we have a higher status lock, or primary is set to the blended GPS, change GPS
             primary_instance = i;
-            _last_instance_swap_ms = now;
+            _gps_swap_ms = now;
             continue;
         }
 
+        
         bool another_gps_has_2_or_more_sats = (state[i].num_sats >= state[primary_instance].num_sats + 2);
+        
+        bool another_gps_has_6_or_more_sats = (state[i].num_sats >= state[primary_instance].num_sats + 6);
+           
+        if (state[i].status == state[primary_instance].status) {
 
-        if (state[i].status == state[primary_instance].status && another_gps_has_2_or_more_sats) {
-
-            bool another_gps_has_6_or_more_sats = (state[i].num_sats >= state[primary_instance].num_sats + 6);
-
-            //when disarmed activally switch to best GPS
+            // when disarmed switch GPS if alternate has 2 more satelights for 15 seconds
             if (!hal.util->get_soft_armed()){
-                if (another_gps_has_2_or_more_sats && (now - _last_instance_swap_ms) >= 30000) {    
-                    primary_instance = i;
-                    _last_instance_swap_ms = now;
-                    gcs().send_text(MAV_SEVERITY_INFO, "GPS-Switch to best");
+                if (another_gps_has_2_or_more_sats) {
+                    if (now - _gps_swap_ms >= 15000) {    
+                        primary_instance = i;
+                        _gps_swap_ms = now;
+                        gcs().send_text(MAV_SEVERITY_INFO, "GPS-Switch to best");
+                    }    
+                }
+                else {
+                    _gps_swap_ms = now;
+                }                        
+            }
+             // while flying switch GPS if alternate has 6 more satelight for 5 seconds
+            else if (hal.util->get_soft_armed()){
+                if (another_gps_has_6_or_more_sats) {
+                    if (now - _gps_swap_ms >= 5000) {  
+                        primary_instance = i;
+                        _gps_swap_ms = now;
+                        gcs().send_text(MAV_SEVERITY_CRITICAL, "GPS-SWITCH TO SECONDARY");
+                    }
+                }  
+                else {
+                    _gps_swap_ms = now;
                 }
             }
-             //while flying only switch GPS if there is a significant differance
-            else if (hal.util->get_soft_armed()){
-                if (another_gps_has_6_or_more_sats && (now - _last_instance_swap_ms) >= 5000) {  
-                    primary_instance = i;
-                    _last_instance_swap_ms = now;
-                    gcs().send_text(MAV_SEVERITY_CRITICAL, "GPS-SWITCH TO SECONDARY");
-                }
-            }   
         }
     }
 #endif // GPS_BLENDED_INSTANCE

@@ -79,6 +79,8 @@ void AP_EFI_ECU_Lite::check_status()
 {
     const uint32_t now = AP_HAL::millis();
 
+    
+    // Error Messaging That Repeat
     if ((now - _last_message) > MESSAGE_TIME_MS) {
         _last_message = now;
         
@@ -87,16 +89,16 @@ void AP_EFI_ECU_Lite::check_status()
         //gcs().send_text(MAV_SEVERITY_INFO, "Fuel: %f",_latest.fuel);
         //gcs().send_text(MAV_SEVERITY_INFO, "MAH: %f",_latest.mah);
         
-        if (_latest.error_state == 1){
-            gcs().send_text(MAV_SEVERITY_CRITICAL, "POWER BUS ANOMALY");
+        if (_latest.error_state == 1) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "ENGINE RESTART");
         }
         
         else if (_latest.error_state == 2) {
-            gcs().send_text(MAV_SEVERITY_CRITICAL, "HCU ERROR CLEARED");
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "ENGINE HEALTH POOR");
         }
         
         else if (_latest.error_state == 3) {
-            gcs().send_text(MAV_SEVERITY_CRITICAL, "ENGINE RPM ANOMALY");
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "ENGINE HEALTH CRITICAL");
         }
         
         else if (_latest.error_state == 4) {
@@ -104,62 +106,86 @@ void AP_EFI_ECU_Lite::check_status()
         }
         
         else if (_latest.error_state == 5) {
-            gcs().send_text(MAV_SEVERITY_CRITICAL, "ENGINE HEALTH POOR");
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "POWER BUS ANOMALY");
         }
-        
+              
         else if (_latest.error_state == 6) {
-            gcs().send_text(MAV_SEVERITY_CRITICAL, "FUEL SENSOR ANOMALY");
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "ENGINE RPM ANOMALY");
         }
         
+        else if (_latest.error_state == 7) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "E-THRUST");
+        }
+                
+        else if (_latest.error_state == 8) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "CHARGING ANOMALY");
+        }
         
+        else if (_latest.error_state == 9) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "FUEL SENSOR ANOMALY");
+        }
         
+        else if (_latest.error_state == 10) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "BATTERY CRITICAL");
+        }
+        
+        else if (_latest.error_state == 98) {
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "HCU-RALLY");
+        }
+              
+        else if (_latest.error_state == 99) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "HCU ERROR CLEARED");
+        }
+    }
         
 
-        // Engine Time (send once per engine cycle)
-        if (_latest.rpm < 1 && _send_engine_time_message) {
-            _send_engine_time_message = false;
+    // Engine Time (send once per engine cycle)
+    if (_latest.rpm < 1 && _send_engine_time_message) {
+        _send_engine_time_message = false;
 
-            // Engine Time 
-            int16_t hours = _latest.engine_time / 3600;
-            int16_t tenths = (_latest.engine_time % 3600) / 360;
-            gcs().send_text(MAV_SEVERITY_INFO, "Engine Time: %d.%d", hours, tenths);
+        // Engine Time 
+        int16_t hours = _latest.engine_time / 3600;
+        int16_t tenths = (_latest.engine_time % 3600) / 360;
+        gcs().send_text(MAV_SEVERITY_INFO, "ENGINE TIME: %d.%d", hours, tenths);
+    }
+
+    // Reset Engine Message
+    if (_latest.rpm > 1000) {
+        _send_engine_time_message = true;
+    }
+
+    // if charging
+    float charge_current_seconds;
+    if (_latest.charging == 1) {
+
+        //Send charge start message (once)
+        if (_send_charge_message) {
+            _send_charge_message = false;
+            gcs().send_text(MAV_SEVERITY_INFO, "CHARGE START");
         }
 
-        // Reset Engine Message
-        if (_latest.rpm > 3000) {
-            _send_engine_time_message = true;
-        }
+        //Charge Timer
+        charge_current_seconds = (now - _charge_start_millis) / 1000;
+        _last_charge_millis = now;
+        
+        _send_charge_complete_message = true;
 
-        // if charging
-        float charge_current_seconds;
-        if (_latest.charging == 1) {
-
-            //Send charge start message (once)
-            if (_send_charge_message) {
-                _send_charge_message = false;
-                gcs().send_text(MAV_SEVERITY_INFO, "Charge Start");
-            }
-
-            //Charge Timer
-            charge_current_seconds = (now - _charge_start_millis) / 1000;
-
-            //Charge Calibration Messaging (optional)
-            //if (plane.g2.supervolo_dev == 1){
-            //    gcs().send_text(MAV_SEVERITY_INFO, "CT:%f PWM:%d V:%.1f A:%.1f ESC:%d Trim:%d", charge_current_seconds, _latest.pwm, _latest.voltage, _latest.amperage, _latest.esc_position, _latest.charge_trim);
+        //Charge Calibration Messaging (optional)
+        //if (plane.g2.supervolo_dev == 1){
+        //    gcs().send_text(MAV_SEVERITY_INFO, "CT:%f PWM:%d V:%.1f A:%.1f ESC:%d Trim:%d", charge_current_seconds, _latest.pwm, _latest.voltage, _latest.amperage, _latest.esc_position, _latest.charge_trim);
             //}
-
-            _send_charge_complete_message = true;
-
-        } else {
+    }
+    else {
+        if (now -_last_charge_millis > 200) {
             //Send charge complete message (once)
             if (_send_charge_complete_message) {
                 _send_charge_complete_message = false;
-                gcs().send_text(MAV_SEVERITY_INFO, "Charge Stop");
+                gcs().send_text(MAV_SEVERITY_INFO, "CHARGE STOP");
 
                 charge_current_seconds = (now - _charge_start_millis) / 1000;
                 int16_t minutes = floorf(charge_current_seconds / 60);
                 int16_t seconds = charge_current_seconds - (minutes * 60);
-                gcs().send_text(MAV_SEVERITY_INFO, "Charging Time %d.%d", minutes, seconds);
+                gcs().send_text(MAV_SEVERITY_INFO, "CHARGE TIME %d:%d", minutes, seconds);
             }
 
             // Reset Current Charge Timer 

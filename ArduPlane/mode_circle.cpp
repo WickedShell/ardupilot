@@ -3,6 +3,10 @@
 
 bool ModeCircle::_enter()
 {
+    // SuperVolo - throttle is not working properly in this mode. transition directly to RTL
+    plane.set_mode(plane.mode_rtl, ModeReason::UNKNOWN);
+    gcs().send_text(MAV_SEVERITY_WARNING, "Circle bump to RTL");
+    
     // the altitude to circle at is taken from the current altitude
     plane.throttle_allows_nudging = false;
     plane.auto_throttle_mode = true;

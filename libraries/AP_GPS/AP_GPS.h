@@ -481,7 +481,7 @@ protected:
     AP_Int8 _min_dgps;
     AP_Int16 _sbp_logmask;
     AP_Int8 _inject_to;
-    uint32_t _last_instance_swap_ms;
+    uint32_t _gps_swap_ms;
     AP_Int8 _sbas_mode;
     AP_Int8 _min_elevation;
     AP_Int8 _raw_data;

@@ -33,18 +33,12 @@ bool ModeRTL::_enter()
     //gcs().send_text(MAV_SEVERITY_INFO, "Alt: %.1f RTL-Alt: %.1f WP-Alt %.1f" ,current_altitude, rtl_alt, wp_alt); 
     
     
-    // Should we be in QRTL instead? (are we hovering close to the home or a Rally location)
-    float airspeed;
-    if (plane.ahrs.airspeed_estimate(airspeed)){
-        if (airspeed < plane.aparm.airspeed_min * .75){
-                    
-            // Are we within 1000m of our Rally location or home?
-            if (plane.current_loc.get_distance(plane.next_WP_loc) < 1000.0){
-                plane.set_mode(plane.mode_qrtl, ModeReason::UNKNOWN);
-                gcs().send_text(MAV_SEVERITY_CRITICAL, "Auto Switch - QRTL");
-            }
-        }
+    // Should we be in QRTL instead? (are we hovering or failing to transition close to the home or a Rally location)
+    if (plane.g2.efi.get_synthetic_arspd() <= 3 && plane.current_loc.get_distance(plane.next_WP_loc) < 1000.0){                
+        plane.set_mode(plane.mode_qrtl, ModeReason::UNKNOWN);
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "Auto Switch - QRTL");
     }
+    
          
     return true;
 }

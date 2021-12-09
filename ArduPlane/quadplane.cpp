@@ -1787,6 +1787,31 @@ void QuadPlane::update(void)
             }
         }
 
+        // if we are running the motors, and not in QLAND then check for a battery imbalance
+        if ((motors->get_spool_state() == AP_Motors::SpoolState::THROTTLE_UNLIMITED) &&
+            (plane.control_mode != &plane.mode_qland)) {
+            const AP_BattMonitor &monitor = plane.battery;
+
+            // assume battery 2 and 3 for this
+            const uint8_t instance_a = 1;
+            const uint8_t instance_b = 2;
+
+            float current_a, current_b;
+            if (monitor.healthy(instance_a) && monitor.healthy(instance_b) &&
+                monitor.current_amps(current_a, instance_a) && monitor.current_amps(current_b, instance_b)) {
+                const float high_current = MAX(current_a, current_b);
+                const float low_current  = MIN(current_a, current_b);
+
+                const float low_threshold = 15;
+                const float high_threshold = 100;
+
+                if ((low_current < low_threshold) && (high_current > high_threshold)) {
+                    gcs().send_text(MAV_SEVERITY_WARNING, "Battery imbalance detected (%1.1f, %1.1f)", current_a, current_b);
+                    plane.set_mode(plane.mode_qland, ModeReason::FAILSAFE);
+                }
+            }
+        }
+
         // output to motors
         motors_output();
 

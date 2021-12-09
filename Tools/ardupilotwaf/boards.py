@@ -361,7 +361,8 @@ class sitl(Board):
         )
 
         env.CXXFLAGS += [
-            '-Werror=float-equal'
+            '-Werror=float-equal',
+            '-Wno-maybe-uninitialized'
         ]
 
         if not cfg.env.DEBUG:

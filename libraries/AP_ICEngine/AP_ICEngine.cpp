@@ -144,6 +144,21 @@ const AP_Param::GroupInfo AP_ICEngine::var_info[] = {
     // @Range: 0 1300
     AP_GROUPINFO("STARTCHN_MIN", 16, AP_ICEngine, start_chan_min_pwm, 0),
 
+    // @Param: START_BATT
+    // @DisplayName: Starter battery monitor
+    // @Description: Selects which starter battery is used for starting checks
+    // @User: Standard
+    // @Values: 0:Disabled, 1:First battery, 2:Second battery, 3:Third battery, 4:Fourth battery, 5:Fifth battery, 6:Sixth battery, 7:Seventh battery, 8:Eight battery
+    AP_GROUPINFO("START_BATT", 17, AP_ICEngine, starter_battery_monitor, 0),
+
+    // @Param: START_MIN_VOLT
+    // @DisplayName: Minimum voltage to allow a start attempt
+    // @Description: Minimum voltage requirement to allow an engine start attempt
+    // @User: Standard
+    // @Range: 0 100
+    // @Units: V
+    AP_GROUPINFO("STARTCHN_MIN", 18, AP_ICEngine, starter_minimum_voltage, 0),
+
     AP_GROUPEND
 };
 
@@ -246,9 +261,18 @@ void AP_ICEngine::update(void)
     case ICE_START_DELAY:
         if (!should_run) {
             state = ICE_OFF;
-        } else if (now - starter_last_run_ms >= starter_delay*1000) {
-            gcs().send_text(MAV_SEVERITY_INFO, "Starting engine");
-            state = ICE_STARTING;
+        } else {
+            AP_BattMonitor &battery = AP::battery();
+            if (battery.is_healthy(starter_battery_monitor - 1) && starter_minimum_voltage > 0) {
+                const float currentVoltage = battery.voltage(starter_battery_monitor - 1);
+                if (currentVoltage < starter_minimum_voltage) {
+                    break;
+                }
+            }
+            if (now - starter_last_run_ms >= starter_delay*1000) {
+                gcs().send_text(MAV_SEVERITY_INFO, "Starting engine");
+                state = ICE_STARTING;
+            }
         }
         break;
 

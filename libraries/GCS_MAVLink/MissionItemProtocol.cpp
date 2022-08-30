@@ -110,11 +110,14 @@ void MissionItemProtocol::handle_mission_request_list(
 
     // reply with number of commands in the mission.  The GCS will
     // then request each command separately
-    mavlink_msg_mission_count_send(_link.get_chan(),
-                                   msg.sysid,
-                                   msg.compid,
-                                   item_count(),
-                                   mission_type());
+    const mavlink_channel_t chan = _link.get_chan();
+    if (HAVE_PAYLOAD_SPACE(chan, MISSION_COUNT)) {
+        mavlink_msg_mission_count_send(chan,
+                                       msg.sysid,
+                                       msg.compid,
+                                       item_count(),
+                                       mission_type());
+    }
 }
 
 void MissionItemProtocol::handle_mission_request_int(const GCS_MAVLINK &_link,
@@ -147,7 +150,9 @@ void MissionItemProtocol::handle_mission_request_int(const GCS_MAVLINK &_link,
         return;
     }
 
-    _link.send_message(MAVLINK_MSG_ID_MISSION_ITEM_INT, (const char*)&ret_packet);
+    if (HAVE_PAYLOAD_SPACE(_link.get_chan(), MISSION_ITEM_INT)) {
+        _link.send_message(MAVLINK_MSG_ID_MISSION_ITEM_INT, (const char*)&ret_packet);
+    }
 }
 
 void MissionItemProtocol::handle_mission_request(const GCS_MAVLINK &_link,
@@ -185,7 +190,9 @@ void MissionItemProtocol::handle_mission_request(const GCS_MAVLINK &_link,
         return;
     }
 
-    _link.send_message(MAVLINK_MSG_ID_MISSION_ITEM, (const char*)&ret_packet);
+    if (HAVE_PAYLOAD_SPACE(_link.get_chan(), MISSION_ITEM_INT)) {
+        _link.send_message(MAVLINK_MSG_ID_MISSION_ITEM, (const char*)&ret_packet);
+    }
 }
 
 void MissionItemProtocol::handle_mission_write_partial_list(GCS_MAVLINK &_link,
@@ -292,11 +299,15 @@ void MissionItemProtocol::send_mission_ack(const GCS_MAVLINK &_link,
                                            const mavlink_message_t &msg,
                                            MAV_MISSION_RESULT result) const
 {
-    mavlink_msg_mission_ack_send(_link.get_chan(),
-                                 msg.sysid,
-                                 msg.compid,
-                                 result,
-                                 mission_type());
+
+    const mavlink_channel_t chan = _link.get_chan();
+    if (HAVE_PAYLOAD_SPACE(chan, MISSION_ACK)) {
+        mavlink_msg_mission_ack_send(chan,
+                                     msg.sysid,
+                                     msg.compid,
+                                     result,
+                                     mission_type());
+    }
 }
 
 /**
@@ -315,8 +326,12 @@ void MissionItemProtocol::queued_request_send()
         AP::internalerror().error(AP_InternalError::error_t::gcs_bad_missionprotocol_link);
         return;
     }
+    const mavlink_channel_t chan = link->get_chan();
+    if (!HAVE_PAYLOAD_SPACE(chan, MISSION_REQUEST)) {
+        return;
+    }
     mavlink_msg_mission_request_send(
-        link->get_chan(),
+        chan,
         dest_sysid,
         dest_compid,
         request_i,
@@ -339,11 +354,14 @@ void MissionItemProtocol::update()
     if (tnow - timelast_receive_ms > upload_timeout_ms) {
         receiving = false;
         timeout();
-        mavlink_msg_mission_ack_send(link->get_chan(),
-                                     dest_sysid,
-                                     dest_compid,
-                                     MAV_MISSION_OPERATION_CANCELLED,
-                                     mission_type());
+        const mavlink_channel_t chan = link->get_chan();
+        if (HAVE_PAYLOAD_SPACE(chan, MISSION_ACK)) {
+            mavlink_msg_mission_ack_send(chan,
+                                         dest_sysid,
+                                         dest_compid,
+                                         MAV_MISSION_OPERATION_CANCELLED,
+                                         mission_type());
+        }
         link = nullptr;
         free_upload_resources();
         return;

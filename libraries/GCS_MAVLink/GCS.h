@@ -93,11 +93,13 @@ public:
     void send_mission_ack(const mavlink_message_t &msg,
                           MAV_MISSION_TYPE mission_type,
                           MAV_MISSION_RESULT result) const {
-        mavlink_msg_mission_ack_send(chan,
-                                     msg.sysid,
-                                     msg.compid,
-                                     result,
-                                     mission_type);
+        if (HAVE_PAYLOAD_SPACE(chan, MISSION_ACK)) {
+            mavlink_msg_mission_ack_send(chan,
+                                         msg.sysid,
+                                         msg.compid,
+                                         result,
+                                         mission_type);
+        }
     }
 
     static const MAV_MISSION_TYPE supported_mission_types[3];

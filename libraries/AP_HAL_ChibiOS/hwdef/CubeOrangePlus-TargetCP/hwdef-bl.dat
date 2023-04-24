@@ -1,0 +1,31 @@
+# hw definition file for processing by chibios_hwdef.py
+
+# MCU class and specific type
+MCU STM32H7xx STM32H757xx
+define CORE_CM7
+define SMPS_PWR
+
+include ../CubeOrange/hwdef-bl.inc
+
+undef USB_STRING_PRODUCT
+undef USB_STRING_MANUFACTURER
+undef APJ_BOARD_ID
+undef USB_PRODUCT
+
+# USB setup
+USB_PRODUCT 0x1058
+USB_STRING_MANUFACTURER "CubePilot"
+USB_STRING_PRODUCT "CubeOrange+Target-BL"
+
+# only load firmware over USB
+SERIAL_ORDER OTG1
+
+# force aux outputs off
+PE14 AUXOUT_BL_1 OUTPUT LOW
+PE13 AUXOUT_BL_2 OUTPUT LOW
+PE11 AUXOUT_BL_3 OUTPUT LOW
+PE9  AUXOUT_BL_4 OUTPUT LOW
+PD13 AUXOUT_BL_5 OUTPUT LOW
+PD14 AUXOUT_BL_6 OUTPUT LOW
+
+APJ_BOARD_ID 42069

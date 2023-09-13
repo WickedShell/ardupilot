@@ -17,8 +17,8 @@ USB_PRODUCT 0x1058
 USB_STRING_MANUFACTURER "CubePilot"
 USB_STRING_PRODUCT "CubeOrange+Target-BL"
 
-# only load firmware over USB
-SERIAL_ORDER OTG1
+# only load firmware over USB or telem 1
+SERIAL_ORDER OTG1 USART2
 
 # force aux outputs off
 PE14 AUXOUT_BL_1 OUTPUT LOW

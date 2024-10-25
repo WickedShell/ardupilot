@@ -227,8 +227,11 @@ float Plane::stabilize_pitch_get_pitch_out()
         demanded_pitch = landing.get_pitch_cd();
     }
 
-    return pitchController.get_servo_out(demanded_pitch - ahrs.pitch_sensor, speed_scaler, disable_integrator,
-                                         ground_mode && !(plane.flight_option_enabled(FlightOptions::DISABLE_GROUND_PID_SUPPRESSION)));
+    float commandedPitch = pitchController.get_servo_out(demanded_pitch - ahrs.pitch_sensor, speed_scaler, disable_integrator,
+                                                         ground_mode &&
+                                                         !(plane.g2.flight_options & FlightOptions::DISABLE_GROUND_PID_SUPPRESSION));
+    commandedPitch += SRV_Channels::get_slew_limited_output_scaled(SRV_Channel::k_flap_auto) * g2.kff_flap_to_pitch;
+    return commandedPitch;
 }
 
 /*

@@ -1289,6 +1289,14 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_GROUPINFO("RNGFND_LND_ORNT", 36, ParametersG2, rangefinder_land_orient, ROTATION_PITCH_270),
 #endif
     
+    // @Param: KFF_FLAP2PTCH
+    // @DisplayName: Flap to Pitch Mix
+    // @Description: Pitch up to add in proportion to flap.
+    // @Range: -7 7
+    // @Increment: 0.25
+    // @User: Advanced
+    AP_GROUPINFO("KFF_FLAP2PTCH", 37, ParametersG2, kff_flap_to_pitch, 0),
+
     AP_GROUPEND
 };
 
